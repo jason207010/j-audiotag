@@ -4,11 +4,14 @@ j-audiotag 是一个前后端一体的 web 项目，可以读取音频文件标�
 
 ## 技术栈
 
-1. Spring Boot
-2. Hutool
-3. jaudiotagger
-4. Vue 3
-5. Element Plus
+1. Java 8
+2. Spring Boot
+3. Hutool
+4. jaudiotagger
+5. Javascript
+6. Vue 3
+7. Element Plus
+8. Axios
 
 ## 截图
 
