@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>音乐标签</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="/static/element-plus/2.2.10/index.min.css"/>
+</head>
+<body>
+<div id="app">
+    <el-container>
+        <el-header>
+            <el-row>
+                <el-col :span="6">
+                    <el-input v-model="filePath" placeholder="请输入文件路径"/>
+                </el-col>
+                <el-col :span="2" :offset="1">
+                    <el-button type="primary" @click="scan">扫描</el-button>
+                </el-col>
+            </el-row>
+        </el-header>
+        <el-main>
+            <el-table :data="audioTagTableData" stripe>
+                <el-table-column type="expand">
+                    <template #default="scope">
+                        <el-card shadow="always">
+                            <span style="white-space: pre-line;">{{scope.row.lyric}}</span>
+                        </el-card>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="fileName" label="文件名"></el-table-column>
+                <el-table-column prop="artist" label="歌手"></el-table-column>
+                <el-table-column prop="title" label="歌名"></el-table-column>
+                <el-table-column prop="album" label="专辑"></el-table-column>
+                <el-table-column label="专辑封面">
+                    <template #default="artworkScope">
+                        <img :src="artworkScope.row.albumPicBase64" style="height: 65px;width: 65px;"/>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="year" label="年份"></el-table-column>
+                <el-table-column prop="track" label="Track"></el-table-column>
+                <el-table-column label="操作">
+                    <template #default="scope">
+                        <el-button type="primary" @click="search(scope.row)">搜索</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </el-main>
+    </el-container>
+
+    <el-dialog v-model="isShowSearchDialog" title="搜索结果">
+        <el-table :data="searchTableData" stripe>
+            <el-table-column prop="title" label="歌名"></el-table-column>
+            <el-table-column prop="artist" label="歌手"></el-table-column>
+            <el-table-column prop="album" label="专辑"></el-table-column>
+            <el-table-column label="操作">
+                <template #default="scope">
+                    <el-button type="primary" @click="showWriteDialog(scope.row)">写入</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+    </el-dialog>
+
+    <el-dialog v-model="isShowWriteDialog" title="写入">
+        <el-form :model="song" label-position="right" label-width="100px">
+            <el-form-item label="文件路径">
+                <el-input v-model="song.absolutePath"></el-input>
+            </el-form-item>
+            <el-form-item label="歌名">
+                <el-input v-model="song.title"></el-input>
+            </el-form-item>
+            <el-form-item label="歌手">
+                <el-input v-model="song.artist"></el-input>
+            </el-form-item>
+            <el-form-item label="专辑">
+                <el-input v-model="song.album"></el-input>
+            </el-form-item>
+            <el-form-item label="专辑封面链接">
+                <el-input v-model="song.albumPicUrl" disabled="true"></el-input>
+            </el-form-item>
+            <el-form-item label="专辑封面预览">
+                <img :src="song.albumPicUrl" style="width: 200px;height: 200px;"/>
+            </el-form-item>
+            <el-form-item label="年份">
+                <el-input v-model="song.year"></el-input>
+            </el-form-item>
+            <el-form-item label="Track">
+                <el-input v-model="song.track"></el-input>
+            </el-form-item>
+            <el-form-item label="歌词">
+                <el-input v-model="song.lyric" type="textarea"></el-input>
+            </el-form-item>
+            <el-form-item>
+                <el-button type="primary" @click="writeTag()">写入</el-button>
+            </el-form-item>
+        </el-form>
+    </el-dialog>
+</div>
+</body>
+<script src="/static/vue/3.2.37/vue.global.prod.js"></script>
+<script src="/static/element-plus/2.2.10/index.full.js"></script>
+<script src="/static/axios/0.27.2/axios.min.js"></script>
+<script>
+    const App = {
+        data() {
+            return {
+                filePath: '',
+                audioTagTableData: [],
+
+                isShowSearchDialog: false,
+                searchTableData: [],
+
+                isShowWriteDialog: false,
+                song: {},
+            }
+        },
+        methods: {
+            scan() {
+                axios.get('/scan', {
+                    params: {
+                        filePath: this.filePath
+                    }
+                }).then((response) => {
+                    this.audioTagTableData = response.data.data
+                });
+            },
+            search(audioTagVO) {
+                axios.get('/search', {
+                    params: {
+                        fileName: audioTagVO.fileName
+                    }
+                }).then((response) => {
+                    let songs = response.data.data.songs;
+                    for(let song of songs) {
+                        song.absolutePath = audioTagVO.absolutePath
+                    }
+                    this.searchTableData = songs
+                    this.isShowSearchDialog = true
+                });
+            },
+            showWriteDialog(song) {
+                axios.get('/song', {
+                    params: {
+                        songId: song.id
+                    }
+                }).then((response) => {
+                    this.song=response.data.data
+                    this.song.absolutePath = song.absolutePath
+                    this.isShowWriteDialog = true
+                })
+            },
+            writeTag() {
+                axios({
+                    method: 'post',
+                    url: '/writeTag',
+                    data: this.song
+                }).then((response) => {
+                    this.scan()
+                    this.isShowWriteDialog = false
+                    this.isShowSearchDialog = false
+                })
+            }
+        }
+    }
+    Vue.createApp(App).use(ElementPlus).mount('#app')
+</script>
+</html>
